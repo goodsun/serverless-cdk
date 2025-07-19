@@ -1,0 +1,30 @@
+{
+  "name": "serverless-cdk",
+  "version": "0.1.0",
+  "description": "Battle-tested serverless boilerplate based on AWS CDK",
+  "main": "index.js",
+  "bin": {
+    "create-serverless-cdk": "./bin/create-serverless-cdk.js"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "serverless",
+    "aws",
+    "cdk",
+    "lambda",
+    "dynamodb",
+    "s3",
+    "boilerplate"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "fs-extra": "^11.0.0"
+  }
+}
