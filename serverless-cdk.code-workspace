@@ -1,0 +1,98 @@
+{
+  "folders": [
+    {
+      "name": "📦 serverless-cdk (root)",
+      "path": "."
+    },
+    {
+      "name": "🚀 demo-api",
+      "path": "test-env/demo-api"
+    },
+    {
+      "name": "🚀 demo-api-v2",
+      "path": "test-env/demo-api-v2"
+    },
+    {
+      "name": "📱 test-app",
+      "path": "test-env/test-app"
+    },
+    {
+      "name": "📝 template",
+      "path": "template"
+    }
+  ],
+  "settings": {
+    "typescript.tsdk": "node_modules/typescript/lib",
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.fixAll.eslint": true
+    },
+    "files.exclude": {
+      "**/node_modules": true,
+      "**/cdk.out": true,
+      "**/.git": true,
+      "**/dist": true,
+      "**/build": true
+    },
+    "search.exclude": {
+      "**/node_modules": true,
+      "**/cdk.out": true,
+      "**/dist": true,
+      "**/build": true,
+      "**/package-lock.json": true
+    }
+  },
+  "launch": {
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "type": "node",
+        "request": "launch",
+        "name": "Debug Lambda Function",
+        "program": "${workspaceFolder}/src/api/lambda.ts",
+        "preLaunchTask": "npm: build:api",
+        "outFiles": [
+          "${workspaceFolder}/dist/**/*.js"
+        ],
+        "env": {
+          "NODE_ENV": "development",
+          "AWS_REGION": "ap-northeast-1"
+        }
+      }
+    ]
+  },
+  "tasks": {
+    "version": "2.0.0",
+    "tasks": [
+      {
+        "type": "npm",
+        "script": "build",
+        "group": "build",
+        "problemMatcher": "$tsc",
+        "label": "Build TypeScript"
+      },
+      {
+        "type": "npm",
+        "script": "build:api",
+        "group": "build",
+        "label": "Build API Lambda"
+      },
+      {
+        "type": "npm",
+        "script": "deploy:dev",
+        "group": "none",
+        "label": "Deploy to Dev"
+      }
+    ]
+  },
+  "extensions": {
+    "recommendations": [
+      "dbaeumer.vscode-eslint",
+      "esbenp.prettier-vscode",
+      "ms-vscode.vscode-typescript-tsc",
+      "amazonwebservices.aws-toolkit-vscode",
+      "humao.rest-client",
+      "yzhang.markdown-all-in-one"
+    ]
+  }
+}

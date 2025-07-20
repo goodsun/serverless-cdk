@@ -1,0 +1,41 @@
+# Development files
+.git
+.gitignore
+.env
+.env.*
+*.log
+
+# Test files
+test/
+*.test.js
+*.spec.js
+
+# CI/CD
+.github/
+.travis.yml
+.circleci/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build files
+*.tgz
+
+# Documentation source
+docs/
+
+# Local test projects
+test-env/
+demo-api-v2/
+
+# Development notes
+*.md
+!README.md
+!LICENSE

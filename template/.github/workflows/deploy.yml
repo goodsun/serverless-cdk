@@ -1,0 +1,145 @@
+name: Deploy to AWS
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - production
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - stg
+          - prod
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    # 環境の決定
+    env:
+      CDK_ENV: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment || github.ref == 'refs/heads/develop' && 'dev' || github.ref == 'refs/heads/production' && 'prod' || 'dev' }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build
+
+      - name: Build API for Lambda
+        run: npm run build:api
+
+      - name: Build Frontend
+        run: npm run build:frontend
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets[format('AWS_ACCESS_KEY_ID_{0}', env.CDK_ENV)] }}
+          aws-secret-access-key: ${{ secrets[format('AWS_SECRET_ACCESS_KEY_{0}', env.CDK_ENV)] }}
+          aws-region: ${{ secrets[format('CDK_REGION_{0}', env.CDK_ENV)] || 'ap-northeast-1' }}
+
+      - name: Deploy to AWS
+        env:
+          # AWS Configuration
+          CDK_ACCOUNT_DEV: ${{ secrets.CDK_ACCOUNT_DEV }}
+          CDK_ACCOUNT_STG: ${{ secrets.CDK_ACCOUNT_STG }}
+          CDK_ACCOUNT_PROD: ${{ secrets.CDK_ACCOUNT_PROD }}
+          CDK_REGION_DEV: ${{ secrets.CDK_REGION_DEV }}
+          CDK_REGION_STG: ${{ secrets.CDK_REGION_STG }}
+          CDK_REGION_PROD: ${{ secrets.CDK_REGION_PROD }}
+          
+          # Application Configuration
+          APP_NAME: ${{ secrets.APP_NAME }}
+          LOG_LEVEL_DEV: ${{ secrets.LOG_LEVEL_DEV }}
+          LOG_LEVEL_STG: ${{ secrets.LOG_LEVEL_STG }}
+          LOG_LEVEL_PROD: ${{ secrets.LOG_LEVEL_PROD }}
+          
+          # Feature Flags
+          ENABLE_PITR_DEV: ${{ secrets.ENABLE_PITR_DEV }}
+          ENABLE_PITR_STG: ${{ secrets.ENABLE_PITR_STG }}
+          ENABLE_PITR_PROD: ${{ secrets.ENABLE_PITR_PROD }}
+          ENABLE_API_CACHE_DEV: ${{ secrets.ENABLE_API_CACHE_DEV }}
+          ENABLE_API_CACHE_STG: ${{ secrets.ENABLE_API_CACHE_STG }}
+          ENABLE_API_CACHE_PROD: ${{ secrets.ENABLE_API_CACHE_PROD }}
+          
+          # Domain Configuration (Optional)
+          DOMAIN_NAME: ${{ secrets.DOMAIN_NAME }}
+          API_SUBDOMAIN_DEV: ${{ secrets.API_SUBDOMAIN_DEV }}
+          API_SUBDOMAIN_STG: ${{ secrets.API_SUBDOMAIN_STG }}
+          API_SUBDOMAIN_PROD: ${{ secrets.API_SUBDOMAIN_PROD }}
+          USE_SHARED_CERTIFICATE: ${{ secrets.USE_SHARED_CERTIFICATE }}
+          API_CERTIFICATE_ARN_DEV: ${{ secrets.API_CERTIFICATE_ARN_DEV }}
+          API_CERTIFICATE_ARN_STG: ${{ secrets.API_CERTIFICATE_ARN_STG }}
+          API_CERTIFICATE_ARN_PROD: ${{ secrets.API_CERTIFICATE_ARN_PROD }}
+          
+          # Security Configuration (Optional)
+          ENCRYPTION_KEY_DEV: ${{ secrets.ENCRYPTION_KEY_DEV }}
+          ENCRYPTION_KEY_STG: ${{ secrets.ENCRYPTION_KEY_STG }}
+          ENCRYPTION_KEY_PROD: ${{ secrets.ENCRYPTION_KEY_PROD }}
+          
+          # External Services (Optional)
+          SLACK_WEBHOOK_URL_DEV: ${{ secrets.SLACK_WEBHOOK_URL_DEV }}
+          SLACK_WEBHOOK_URL_STG: ${{ secrets.SLACK_WEBHOOK_URL_STG }}
+          SLACK_WEBHOOK_URL_PROD: ${{ secrets.SLACK_WEBHOOK_URL_PROD }}
+        run: |
+          echo "🚀 Deploying to $CDK_ENV environment"
+          source scripts/set-env.sh
+          npm run cdk deploy -- --require-approval never
+
+      - name: Get deployment outputs
+        id: outputs
+        run: |
+          STACK_NAME="${APP_NAME:-serverless-app}-${CDK_ENV}"
+          API_URL=$(aws cloudformation describe-stacks \
+            --stack-name $STACK_NAME \
+            --query "Stacks[0].Outputs[?OutputKey=='ApiUrl'].OutputValue" \
+            --output text 2>/dev/null || echo "")
+          echo "api_url=$API_URL" >> $GITHUB_OUTPUT
+          
+      - name: Deploy summary
+        run: |
+          echo "## 🎉 Deployment Successful!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** $CDK_ENV" >> $GITHUB_STEP_SUMMARY
+          echo "**API URL:** ${{ steps.outputs.outputs.api_url }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          
+      - name: Notify Slack on failure
+        if: failure()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets[format('SLACK_WEBHOOK_URL_{0}', env.CDK_ENV)] }}
+        run: |
+          if [ -n "$SLACK_WEBHOOK_URL" ]; then
+            curl -X POST $SLACK_WEBHOOK_URL \
+              -H 'Content-Type: application/json' \
+              -d "{
+                \"text\": \"❌ Deployment failed for $CDK_ENV environment\",
+                \"attachments\": [{
+                  \"color\": \"danger\",
+                  \"fields\": [
+                    {\"title\": \"Environment\", \"value\": \"$CDK_ENV\", \"short\": true},
+                    {\"title\": \"Branch\", \"value\": \"${{ github.ref_name }}\", \"short\": true},
+                    {\"title\": \"Commit\", \"value\": \"${{ github.sha }}\", \"short\": true},
+                    {\"title\": \"Actor\", \"value\": \"${{ github.actor }}\", \"short\": true}
+                  ]
+                }]
+              }"
+          fi
