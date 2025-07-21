@@ -114,21 +114,9 @@ cd my-api
 
 ### ステップ2: 環境変数の設定
 
-```bash
-# .envファイルを作成
-cp .env.example .env
+環境変数の設定方法は[共通コマンド集](COMMON_COMMANDS.md#環境変数設定)を参照してください。
 
-# .envファイルを編集
-# 以下の値を実際の値に置き換えてください：
-# CDK_ACCOUNT_DEV=123456789012  # あなたのAWSアカウントID
-# CDK_ACCOUNT_STG=123456789012  # ステージング用（同じでもOK）
-# CDK_ACCOUNT_PROD=123456789012 # 本番用（別推奨）
-```
-
-AWSアカウントIDの確認方法：
-```bash
-aws sts get-caller-identity --query Account --output text
-```
+AWSアカウントIDの確認方法は[共通コマンド集](COMMON_COMMANDS.md#awsアカウントid取得)を参照してください。
 
 ### ステップ3: 依存関係のインストール
 
@@ -138,13 +126,7 @@ npm install
 
 ### ステップ4: CDKブートストラップ
 
-```bash
-# 初回のみ実行が必要
-npm run bootstrap
-
-# または特定のアカウント/リージョンを指定
-cdk bootstrap aws://123456789012/ap-northeast-1
-```
+CDKブートストラップの詳細なコマンドは[共通コマンド集](COMMON_COMMANDS.md#cdkブートストラップ)を参照してください。
 
 ## 🐙 GitHub設定
 
@@ -190,52 +172,7 @@ git push -u origin production
 
 ### ステップ4: GitHub Secretsの設定
 
-#### 必須のSecrets
-
-1. GitHubリポジトリの「Settings」タブを開く
-2. 左メニューから「Secrets and variables」→「Actions」を選択
-3. 「New repository secret」をクリック
-4. 以下のSecretsを追加：
-
-**AWS認証情報（必須）**
-```
-Name: AWS_ACCESS_KEY_ID
-Value: [あなたのAWSアクセスキー]
-
-Name: AWS_SECRET_ACCESS_KEY
-Value: [あなたのAWSシークレットキー]
-```
-
-**環境別設定（必須）**
-```
-Name: CDK_ACCOUNT_DEV
-Value: 123456789012
-
-Name: CDK_ACCOUNT_STG
-Value: 123456789012
-
-Name: CDK_ACCOUNT_PROD
-Value: 234567890123
-
-Name: CDK_REGION_DEV
-Value: ap-northeast-1
-
-Name: CDK_REGION_STG
-Value: ap-northeast-1
-
-Name: CDK_REGION_PROD
-Value: ap-northeast-1
-
-Name: APP_NAME
-Value: my-api
-```
-
-**オプション設定**
-```
-# Slack通知を使用する場合
-Name: SLACK_WEBHOOK_URL_DEV
-Value: https://hooks.slack.com/services/xxx
-```
+GitHub Secretsの設定方法については[GitHub Secrets設定ガイド](../template/GITHUB_SECRETS_SETUP.md)を参照してください。
 
 ### ステップ5: GitHub Actionsの有効化
 
@@ -288,15 +225,7 @@ export AWS_PROFILE=your-profile-name
 
 ### CDKブートストラップエラー
 
-```
-Error: This stack uses assets, so the toolkit stack must be deployed to the environment
-```
-
-**解決方法**:
-```bash
-# ブートストラップを実行
-cdk bootstrap aws://ACCOUNT-ID/REGION
-```
+CDKブートストラップエラーの詳細な解決方法は[トラブルシューティング](TROUBLESHOOTING.md#1-cdkブートストラップエラー)を参照してください。
 
 ### GitHub Actionsエラー
 

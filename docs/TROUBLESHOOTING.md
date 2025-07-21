@@ -16,11 +16,36 @@ CDKツールキットスタックがデプロイされていない
 
 **解決方法**
 ```bash
-# デフォルトアカウント/リージョンでブートストラップ
+# package.jsonに定義されている場合
+npm run bootstrap
+
+# CDKコマンドで直接実行（デフォルトアカウント/リージョン）
 cdk bootstrap
 
 # 特定のアカウント/リージョンでブートストラップ
+cdk bootstrap aws://ACCOUNT-ID/REGION
+
+# 例：東京リージョンの場合
 cdk bootstrap aws://123456789012/ap-northeast-1
+
+# アカウントIDが不明な場合は確認
+aws sts get-caller-identity --query Account --output text
+
+# 特定のプロファイルを使用する場合
+export AWS_PROFILE=your-profile-name
+cdk bootstrap
+```
+
+**既存のブートストラップスタックでエラーが発生する場合**
+```bash
+# 既存のブートストラップスタックを削除
+aws cloudformation delete-stack --stack-name CDKToolkit --region ap-northeast-1
+
+# 削除完了を待つ
+aws cloudformation wait stack-delete-complete --stack-name CDKToolkit --region ap-northeast-1
+
+# 再度ブートストラップ
+cdk bootstrap
 ```
 
 #### 2. IAM権限エラー

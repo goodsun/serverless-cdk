@@ -46,7 +46,7 @@ npm install -g aws-cdk
 npm install -g create-serverless-cdk
 
 # 3. 動作確認
-aws sts get-caller-identity
+# AWSアカウントIDの確認コマンドは[共通コマンド集](COMMON_COMMANDS.md#awsアカウントid取得)を参照
 cdk --version
 ```
 
@@ -56,14 +56,7 @@ cdk --version
 
 ### ステップ1: プロジェクトの作成（5分）
 
-```bash
-# プロジェクトを作成
-create-serverless-cdk todo-api
-cd todo-api
-
-# ファイル構造を確認
-ls -la
-```
+プロジェクト作成手順の詳細は[README.md](../README.md#-クイックスタート)を参照してください。
 
 **確認ポイント**: 
 - `src/api/`フォルダにAPIコードがある
@@ -72,17 +65,7 @@ ls -la
 
 ### ステップ2: 環境設定（10分）
 
-```bash
-# 1. 環境変数ファイルを作成
-cp .env.example .env
-
-# 2. AWSアカウントIDを取得
-aws sts get-caller-identity --query Account --output text
-
-# 3. .envファイルを編集
-# CDK_ACCOUNT_DEV=上で取得したアカウントID
-# APP_NAME=todo-api
-```
+環境変数の設定方法は[共通コマンド集](COMMON_COMMANDS.md#環境変数設定)を参照してください。
 
 ### ステップ3: 初回デプロイ（15分）
 
@@ -209,17 +192,7 @@ git push -u origin main
 
 ### ステップ2: GitHub Secretsの設定（10分）
 
-GitHubリポジトリの Settings > Secrets and variables > Actions で以下を追加：
-
-```
-AWS_ACCESS_KEY_ID: [あなたのアクセスキー]
-AWS_SECRET_ACCESS_KEY: [あなたのシークレットキー]
-CDK_ACCOUNT_DEV: [アカウントID]
-CDK_ACCOUNT_PROD: [アカウントID]
-CDK_REGION_DEV: ap-northeast-1
-CDK_REGION_PROD: ap-northeast-1
-APP_NAME: todo-api
-```
+GitHub Secretsの設定方法は[GitHub Secrets設定ガイド](../template/GITHUB_SECRETS_SETUP.md)を参照してください。
 
 ### ステップ3: 自動デプロイの設定（10分）
 

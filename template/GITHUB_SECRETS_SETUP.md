@@ -1,5 +1,8 @@
 # GitHub Actions Secrets 設定ガイド
 
+このドキュメントではGitHub Actionsで必要なSecretsの設定方法を説明します。
+詳細な設定やブランチ戦略については[GitHub Actions設定ガイド](../docs/GITHUB_ACTIONS.md)を参照してください。
+
 ## 🚀 クイックセットアップ
 
 ### 1. 必須のSecrets（AWS認証情報）
@@ -31,21 +34,7 @@
 
 ### 4. 複数環境を使用する場合
 
-ステージング・本番環境も使用する場合は追加で設定：
-
-```
-AWS_ACCESS_KEY_ID_STG
-AWS_SECRET_ACCESS_KEY_STG
-CDK_ACCOUNT_STG
-CDK_REGION_STG
-（その他 _STG サフィックスの変数）
-
-AWS_ACCESS_KEY_ID_PROD
-AWS_SECRET_ACCESS_KEY_PROD
-CDK_ACCOUNT_PROD
-CDK_REGION_PROD
-（その他 _PROD サフィックスの変数）
-```
+ステージング・本番環境も使用する場合の設定については、[GitHub Actions設定ガイド](../docs/GITHUB_ACTIONS.md#必須のgithub-secrets設定)を参照してください。
 
 ## 🔍 設定の確認
 

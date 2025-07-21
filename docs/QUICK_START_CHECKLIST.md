@@ -57,20 +57,11 @@ npm install -g create-serverless-cdk
 ```
 
 ### 2️⃣ プロジェクトの作成
-```bash
-create-serverless-cdk my-awesome-api
-cd my-awesome-api
-```
+プロジェクト作成手順の詳細は[README.md](../README.md#-クイックスタート)を参照してください。
 
 ### 3️⃣ 環境変数の設定
-```bash
-cp .env.example .env
-# .envファイルを編集
-```
-
-必須項目：
-- `CDK_ACCOUNT_DEV` - あなたのAWSアカウントID
-- `APP_NAME` - プロジェクト名
+環境変数の設定方法の詳細は[共通コマンド集](COMMON_COMMANDS.md#環境変数設定)を参照してください。
+AWSアカウントIDの取得方法は[共通コマンド集](COMMON_COMMANDS.md#awsアカウントid取得)を参照してください。
 
 ### 4️⃣ 初回セットアップ
 ```bash
@@ -107,10 +98,7 @@ git push -u origin main
    → `aws configure`を実行して認証情報を再設定
 
 2. **CDKブートストラップエラー**
-   ```
-   This stack uses assets, so the toolkit stack must be deployed
-   ```
-   → `npm run bootstrap`を実行
+   → [トラブルシューティング](TROUBLESHOOTING.md#1-cdkブートストラップエラー)を参照
 
 3. **権限エラー**
    ```

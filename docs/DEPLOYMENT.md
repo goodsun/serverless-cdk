@@ -31,41 +31,11 @@ export AWS_PROFILE=your-profile-name
 
 ### 1. プロジェクトの作成
 
-```bash
-# CLIツールのインストール
-npm install -g create-serverless-cdk
-
-# 新規プロジェクト作成
-create-serverless-cdk my-app
-cd my-app
-```
+プロジェクト作成手順は[README.md](../README.md#-クイックスタート)を参照してください。
 
 ### 2. 環境変数の設定
 
-```bash
-# .envファイルの作成
-cp .env.example .env
-
-# .envファイルを編集
-vi .env
-
-# 必須: AWSアカウントIDを設定
-# CDK_DEFAULT_ACCOUNT=123456789012  # あなたのAWSアカウントID
-# CDK_DEFAULT_REGION=ap-northeast-1 # デプロイ先リージョン
-# APP_NAME=my-app                   # アプリケーション名
-```
-
-必須の環境変数：
-
-```bash
-# AWS設定（必須）
-CDK_DEFAULT_ACCOUNT=123456789012  # あなたのAWSアカウントID
-CDK_DEFAULT_REGION=ap-northeast-1  # デプロイ先リージョン
-
-# アプリケーション設定（必須）
-APP_NAME=my-app                    # アプリケーション名
-CDK_ENV=dev                        # 環境 (dev/stg/prod)
-```
+環境変数の設定方法は[共通コマンド集](COMMON_COMMANDS.md#環境変数設定)を参照してください。
 
 ### 3. CDKブートストラップ
 
@@ -81,41 +51,9 @@ cdk bootstrap aws://ACCOUNT-ID/REGION
 
 ## デプロイメント
 
-### 開発環境へのデプロイ
+### デプロイコマンド
 
-```bash
-# 依存関係のインストール
-npm install
-
-# 開発環境へデプロイ
-npm run deploy:dev
-
-# または環境変数を直接指定
-CDK_ENV=dev npm run deploy
-```
-
-### ステージング環境へのデプロイ
-
-```bash
-# 環境変数を更新
-export CDK_ENV=stg
-
-# ステージング環境へデプロイ
-npm run deploy:stg
-```
-
-### 本番環境へのデプロイ
-
-```bash
-# 本番環境用の設定確認
-cat .env.prod
-
-# 本番環境へデプロイ（確認プロンプトあり）
-CDK_ENV=prod cdk deploy --require-approval broadening
-
-# 自動承認でデプロイ（CI/CD用）
-npm run deploy:prod
-```
+各環境へのデプロイコマンドは[共通コマンド集](COMMON_COMMANDS.md#デプロイコマンド)を参照してください。
 
 ## デプロイオプション
 
@@ -265,15 +203,7 @@ export AWS_PROFILE=your-profile
 
 #### 2. ブートストラップエラー
 
-```
-Error: This stack uses assets, so the toolkit stack must be deployed to the environment
-```
-
-**解決策**：
-```bash
-# ブートストラップの実行
-cdk bootstrap
-```
+CDKブートストラップエラーの解決方法は[トラブルシューティング](TROUBLESHOOTING.md#1-cdkブートストラップエラー)を参照してください。
 
 #### 3. リソース制限エラー
 
