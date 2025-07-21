@@ -198,4 +198,5 @@ MIT
 
 ### 🆘 サポート
 - [トラブルシューティング](docs/TROUBLESHOOTING.md)
+- [共通コマンド集](docs/COMMON_COMMANDS.md)
 - [コントリビューション](CONTRIBUTING.md)
