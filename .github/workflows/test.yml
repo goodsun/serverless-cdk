@@ -2,9 +2,17 @@ name: Test serverless-cdk
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ develop, staging, production ]
   pull_request:
-    branches: [ main, develop ]
+    branches: [ develop, staging, production ]
+
+env:
+  # Default values for testing
+  APP_NAME: serverless-cdk-test
+  AWS_REGION: us-east-1
+  LOG_LEVEL: info
+  ENABLE_PITR: false
+  ENABLE_API_CACHE: false
 
 jobs:
   test-template:
@@ -194,6 +202,12 @@ jobs:
       env:
         CDK_DEFAULT_ACCOUNT: "123456789012"
         CDK_DEFAULT_REGION: "us-east-1"
+        CDK_ACCOUNT_DEV: "123456789012"
+        CDK_REGION_DEV: "us-east-1"
+        APP_NAME: ${{ env.APP_NAME }}
+        LOG_LEVEL_DEV: ${{ env.LOG_LEVEL }}
+        ENABLE_PITR_DEV: ${{ env.ENABLE_PITR }}
+        ENABLE_API_CACHE_DEV: ${{ env.ENABLE_API_CACHE }}
 
   lint:
     runs-on: ubuntu-latest

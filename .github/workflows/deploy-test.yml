@@ -1,0 +1,163 @@
+name: Deploy Test
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy'
+        required: true
+        default: 'test'
+        type: choice
+        options:
+          - test
+          - dev
+      destroy_after_test:
+        description: 'Destroy stack after test'
+        required: true
+        default: true
+        type: boolean
+
+jobs:
+  deploy-and-test:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Use Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20.x
+    
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_REGION || 'us-east-1' }}
+    
+    - name: Setup test project
+      run: |
+        # Create test project
+        TEST_DIR="deploy-test-$(date +%s)"
+        mkdir -p $TEST_DIR
+        cp -r template/* $TEST_DIR/
+        cd $TEST_DIR
+        
+        # Install dependencies
+        npm install
+        
+        # Create .env file
+        cat > .env << EOF
+        APP_NAME=serverless-cdk-test-${{ github.run_id }}
+        CDK_ACCOUNT_DEV=${{ secrets.CDK_ACCOUNT_DEV || secrets.AWS_ACCOUNT_ID }}
+        CDK_REGION_DEV=${{ secrets.CDK_REGION_DEV || secrets.AWS_REGION || 'us-east-1' }}
+        LOG_LEVEL_DEV=info
+        ENABLE_PITR_DEV=false
+        ENABLE_API_CACHE_DEV=false
+        EOF
+        
+        echo "TEST_DIR=$TEST_DIR" >> $GITHUB_ENV
+    
+    - name: Build project
+      run: |
+        cd $TEST_DIR
+        npm run build
+        npm run build:api
+        npm run build:frontend
+    
+    - name: CDK Bootstrap (if needed)
+      run: |
+        cd $TEST_DIR
+        npx cdk bootstrap || echo "Bootstrap stack already exists"
+      continue-on-error: true
+    
+    - name: Deploy stack
+      id: deploy
+      run: |
+        cd $TEST_DIR
+        npx cdk deploy --require-approval never --outputs-file outputs.json
+        
+        # Extract API URL from outputs
+        API_URL=$(jq -r '.["'$APP_NAME'-dev-stack"].ApiUrl' outputs.json)
+        echo "API_URL=$API_URL" >> $GITHUB_ENV
+        echo "API URL: $API_URL"
+    
+    - name: Test API endpoints
+      run: |
+        # Wait for API to be ready
+        sleep 10
+        
+        # Test health endpoint
+        echo "Testing health endpoint..."
+        curl -f "${API_URL}health" || exit 1
+        
+        # Test items endpoints
+        echo "Testing items endpoints..."
+        
+        # Create item
+        ITEM_ID=$(curl -X POST "${API_URL}items" \
+          -H "Content-Type: application/json" \
+          -d '{"name":"Test Item","description":"Test Description"}' \
+          | jq -r '.id')
+        echo "Created item: $ITEM_ID"
+        
+        # Get item
+        curl -f "${API_URL}items/$ITEM_ID" || exit 1
+        
+        # List items
+        curl -f "${API_URL}items" || exit 1
+        
+        # Delete item
+        curl -X DELETE "${API_URL}items/$ITEM_ID" || exit 1
+        
+        echo "✅ All API tests passed!"
+    
+    - name: Test Frontend
+      run: |
+        cd $TEST_DIR
+        
+        # Check if frontend is accessible
+        FRONTEND_URL=$(jq -r '.["'$APP_NAME'-dev-stack"].FrontendUrl' outputs.json)
+        echo "Frontend URL: $FRONTEND_URL"
+        
+        # Test if index.html is served
+        curl -f "$FRONTEND_URL" || exit 1
+        echo "✅ Frontend is accessible!"
+    
+    - name: Check CloudWatch Logs
+      run: |
+        # Get log group name
+        LOG_GROUP="/aws/lambda/$APP_NAME-dev-api"
+        
+        # Check if logs exist
+        aws logs describe-log-streams --log-group-name "$LOG_GROUP" --limit 5 || echo "No logs found yet"
+    
+    - name: Destroy stack
+      if: ${{ always() && github.event.inputs.destroy_after_test == 'true' }}
+      run: |
+        cd $TEST_DIR
+        npx cdk destroy --force
+        echo "✅ Stack destroyed!"
+    
+    - name: Cleanup
+      if: always()
+      run: |
+        rm -rf $TEST_DIR
+
+  integration-test-matrix:
+    needs: deploy-and-test
+    if: ${{ success() && github.event.inputs.destroy_after_test == 'false' }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        frontend-type: [static, vite-react]
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Run integration test for ${{ matrix.frontend-type }}
+      run: |
+        echo "Would run integration tests for ${{ matrix.frontend-type }} frontend"
+        # Additional integration tests can be added here
