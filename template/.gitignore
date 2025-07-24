@@ -36,6 +36,10 @@ coverage/
 # Build outputs
 build/
 out/
+*.js
+!jest.config.js
+!vitest.config.js
+!scripts/*.js
 
 # AWS
 .aws-sam/

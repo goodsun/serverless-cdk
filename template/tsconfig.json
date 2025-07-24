@@ -28,6 +28,7 @@
     "node_modules",
     "cdk.out",
     "dist",
-    "build"
+    "build",
+    "src/frontend"
   ]
 }

@@ -1,0 +1,224 @@
+name: Test serverless-cdk
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test-template:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+        test-case:
+          - name: "basic"
+            frontend: "static"
+          - name: "vite-react"
+            frontend: "vite"
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+    
+    - name: Install dependencies
+      run: npm install
+    
+    - name: Create test project
+      run: |
+        mkdir -p test-project
+        cp -r template/* test-project/
+        cd test-project
+        npm install
+    
+    - name: Setup frontend (${{ matrix.test-case.frontend }})
+      if: matrix.test-case.frontend == 'vite'
+      run: |
+        cd test-project
+        mkdir -p src/frontend
+        
+        # Create a minimal Vite project
+        cat > src/frontend/package.json << 'EOF'
+        {
+          "name": "test-frontend",
+          "private": true,
+          "version": "0.0.0",
+          "type": "module",
+          "scripts": {
+            "dev": "vite",
+            "build": "vite build",
+            "preview": "vite preview"
+          },
+          "dependencies": {
+            "react": "^18.2.0",
+            "react-dom": "^18.2.0"
+          },
+          "devDependencies": {
+            "@types/react": "^18.2.0",
+            "@types/react-dom": "^18.2.0",
+            "@vitejs/plugin-react": "^4.2.0",
+            "typescript": "^5.2.0",
+            "vite": "^5.0.0"
+          }
+        }
+        EOF
+        
+        cat > src/frontend/vite.config.ts << 'EOF'
+        import { defineConfig } from 'vite'
+        import react from '@vitejs/plugin-react'
+        
+        export default defineConfig({
+          plugins: [react()],
+        })
+        EOF
+        
+        cat > src/frontend/tsconfig.json << 'EOF'
+        {
+          "compilerOptions": {
+            "target": "ES2020",
+            "useDefineForClassFields": true,
+            "lib": ["ES2020", "DOM", "DOM.Iterable"],
+            "module": "ESNext",
+            "skipLibCheck": true,
+            "moduleResolution": "bundler",
+            "allowImportingTsExtensions": true,
+            "resolveJsonModule": true,
+            "isolatedModules": true,
+            "noEmit": true,
+            "jsx": "react-jsx",
+            "strict": true
+          },
+          "include": ["src"],
+          "references": [{ "path": "./tsconfig.node.json" }]
+        }
+        EOF
+        
+        cat > src/frontend/tsconfig.node.json << 'EOF'
+        {
+          "compilerOptions": {
+            "composite": true,
+            "skipLibCheck": true,
+            "module": "ESNext",
+            "moduleResolution": "bundler",
+            "allowSyntheticDefaultImports": true
+          },
+          "include": ["vite.config.ts"]
+        }
+        EOF
+        
+        cat > src/frontend/src/vite-env.d.ts << 'EOF'
+        /// <reference types="vite/client" />
+        
+        interface ImportMetaEnv {
+          readonly VITE_API_URL: string
+        }
+        
+        interface ImportMeta {
+          readonly env: ImportMetaEnv
+        }
+        EOF
+        
+        mkdir -p src/frontend/src
+        cat > src/frontend/src/main.tsx << 'EOF'
+        import React from 'react'
+        import ReactDOM from 'react-dom/client'
+        
+        ReactDOM.createRoot(document.getElementById('root')!).render(
+          <React.StrictMode>
+            <div>
+              <h1>Test App</h1>
+              <p>Environment: {import.meta.env.MODE}</p>
+            </div>
+          </React.StrictMode>,
+        )
+        EOF
+        
+        cat > src/frontend/index.html << 'EOF'
+        <!doctype html>
+        <html lang="en">
+          <head>
+            <meta charset="UTF-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+            <title>Test App</title>
+          </head>
+          <body>
+            <div id="root"></div>
+            <script type="module" src="/src/main.tsx"></script>
+          </body>
+        </html>
+        EOF
+    
+    - name: Test TypeScript build
+      run: |
+        cd test-project
+        npm run build
+    
+    - name: Test API build
+      run: |
+        cd test-project
+        npm run build:api
+    
+    - name: Test Frontend build
+      run: |
+        cd test-project
+        npm run build:frontend
+      env:
+        VITE_API_URL: https://api.example.com
+    
+    - name: Verify build outputs
+      run: |
+        cd test-project
+        
+        # Check TypeScript build
+        test -d dist
+        test -f dist/lib/serverless-stack.js
+        
+        # Check API build
+        test -d build/api
+        test -f build/api/index.js
+        
+        # Check Frontend build
+        test -d build/frontend
+        test -f build/frontend/index.html
+    
+    - name: Test CDK synth
+      run: |
+        cd test-project
+        npx cdk synth --no-staging
+      env:
+        CDK_DEFAULT_ACCOUNT: "123456789012"
+        CDK_DEFAULT_REGION: "us-east-1"
+
+  lint:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Use Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20.x
+    
+    - name: Install dependencies
+      run: npm install
+    
+    - name: Check template files
+      run: |
+        # Verify critical files exist
+        test -f template/tsconfig.json
+        test -f template/.gitignore
+        test -f template/scripts/build-api.js
+        test -f template/scripts/build-frontend.js
+        
+        # Check tsconfig excludes src/frontend
+        grep -q '"src/frontend"' template/tsconfig.json
+        
+        # Check .gitignore includes scripts/*.js
+        grep -q '!scripts/\*.js' template/.gitignore

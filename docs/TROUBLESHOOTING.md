@@ -262,7 +262,78 @@ npm install --save-dev @types/node @types/express
 }
 ```
 
-#### 2. パッケージバージョン競合
+#### 2. GitHub Actions でのビルドエラー
+
+**問題1: フロントエンドのJSXコンパイルエラー**
+```
+error TS17004: Cannot use JSX unless the '--jsx' flag is provided.
+```
+
+**原因**
+ルートの`tsconfig.json`がフロントエンドファイルも含めてコンパイルしようとしている
+
+**解決方法**
+```json
+// tsconfig.json
+{
+  "exclude": [
+    "node_modules",
+    "cdk.out",
+    "dist",
+    "build",
+    "src/frontend"  // フロントエンドディレクトリを除外
+  ]
+}
+```
+
+**問題2: ビルドスクリプトが見つからない**
+```
+Error: Cannot find module '/home/runner/work/project/project/scripts/build-api.js'
+```
+
+**原因**
+`.gitignore`で`*.js`ファイルが除外されている
+
+**解決方法**
+```
+# .gitignore に追加
+!scripts/*.js
+```
+
+**問題3: Vite環境変数の型エラー**
+```
+error TS2339: Property 'env' does not exist on type 'ImportMeta'.
+```
+
+**解決方法**
+```typescript
+// src/frontend/src/vite-env.d.ts
+interface ImportMetaEnv {
+  readonly VITE_REOWN_PROJECT_ID: string
+  readonly VITE_DEFAULT_CHAIN_ID: string
+  // 他の環境変数も追加
+}
+
+interface ImportMeta {
+  readonly env: ImportMetaEnv
+}
+```
+
+**問題4: CI環境での依存関係インストール失敗**
+
+**解決方法**
+```javascript
+// scripts/build-frontend.js
+if (process.env.CI || !fs.existsSync(path.join(frontendDir, 'node_modules'))) {
+  console.log('📦 Installing frontend dependencies...');
+  execSync('npm ci || npm install', {
+    cwd: frontendDir,
+    stdio: 'inherit'
+  });
+}
+```
+
+#### 3. パッケージバージョン競合
 
 **エラーメッセージ**
 ```
@@ -310,6 +381,44 @@ require('dotenv').config();
 
 # デプロイ時に指定
 CDK_ENV=prod npm run deploy
+```
+
+## CI/CD環境での注意事項
+
+### GitHub Actions 特有の考慮事項
+
+#### 1. 環境の違いを認識する
+- **ローカル環境**では存在するファイルやキャッシュがCI環境には存在しない
+- **依存関係**は毎回クリーンインストールされる
+- **環境変数**は明示的に設定する必要がある
+
+#### 2. ビルド順序の重要性
+```yaml
+# .github/workflows/deploy.yml
+- name: Build TypeScript
+  run: npm run build  # CDK/APIのビルド
+
+- name: Build API
+  run: npm run build:api  # Lambda関数のビルド
+
+- name: Build frontend
+  env:
+    VITE_REOWN_PROJECT_ID: ${{ secrets.VITE_REOWN_PROJECT_ID }}
+    VITE_DEFAULT_CHAIN_ID: ${{ secrets.VITE_DEFAULT_CHAIN_ID }}
+  run: npm run build:frontend  # フロントエンドのビルド
+```
+
+#### 3. モノレポ構造での設定分離
+- **CDK/API用**: ルートの`tsconfig.json`
+- **フロントエンド用**: 独自の`tsconfig.app.json`
+- 相互に干渉しないよう`exclude`設定を適切に行う
+
+#### 4. .gitignoreの落とし穴
+```
+# ビルドスクリプトは明示的に除外から外す
+!scripts/*.js
+!jest.config.js
+!vitest.config.js
 ```
 
 ## デバッグ手法

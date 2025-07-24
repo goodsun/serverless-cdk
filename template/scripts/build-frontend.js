@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const { execSync } = require('child_process');
 
 console.log('🔨 Building frontend...');
 
@@ -72,25 +73,70 @@ if (!sourceDir) {
   fs.writeFileSync(path.join(buildDir, 'index.html'), placeholderHtml);
   console.log('✅ Created placeholder frontend');
 } else {
-  // Copy frontend files
-  console.log(`📁 Copying files from ${path.basename(sourceDir)}...`);
-  copyDirectory(sourceDir, buildDir);
+  // Check if this is a Vite/React project
+  const packageJsonPath = path.join(sourceDir, 'package.json');
+  const isViteProject = fs.existsSync(packageJsonPath) && fs.existsSync(path.join(sourceDir, 'vite.config.ts'));
   
-  // Process index.html if it exists
-  const indexPath = path.join(buildDir, 'index.html');
-  if (fs.existsSync(indexPath)) {
-    let content = fs.readFileSync(indexPath, 'utf8');
+  if (isViteProject) {
+    console.log('🚀 Detected Vite project. Running build...');
     
-    // Get project name from package.json or environment
-    const packageJson = require('../package.json');
-    const projectName = process.env.APP_NAME || packageJson.name || 'Serverless App';
+    // Check if dependencies are installed (especially in CI environment)
+    const nodeModulesPath = path.join(sourceDir, 'node_modules');
+    if (process.env.CI || !fs.existsSync(nodeModulesPath)) {
+      console.log('📦 Installing frontend dependencies...');
+      try {
+        execSync('npm ci || npm install', {
+          cwd: sourceDir,
+          stdio: 'inherit'
+        });
+      } catch (error) {
+        console.error('❌ Failed to install dependencies:', error.message);
+        process.exit(1);
+      }
+    }
     
-    // Replace template variables
-    content = content.replace(/{{PROJECT_NAME}}/g, projectName);
-    content = content.replace(/{{ENVIRONMENT}}/g, environment);
-    content = content.replace(/{{BUILD_TIME}}/g, new Date().toISOString());
+    // Run Vite build
+    try {
+      execSync('npm run build', {
+        cwd: sourceDir,
+        stdio: 'inherit',
+        env: {
+          ...process.env,
+          NODE_ENV: 'production'
+        }
+      });
+      
+      // Copy built files from dist to build directory
+      const viteDistDir = path.join(sourceDir, 'dist');
+      if (fs.existsSync(viteDistDir)) {
+        console.log('📁 Copying built files...');
+        copyDirectory(viteDistDir, buildDir);
+      }
+    } catch (error) {
+      console.error('❌ Frontend build failed:', error.message);
+      process.exit(1);
+    }
+  } else {
+    // Copy frontend files
+    console.log(`📁 Copying files from ${path.basename(sourceDir)}...`);
+    copyDirectory(sourceDir, buildDir);
     
-    fs.writeFileSync(indexPath, content);
+    // Process index.html if it exists
+    const indexPath = path.join(buildDir, 'index.html');
+    if (fs.existsSync(indexPath)) {
+      let content = fs.readFileSync(indexPath, 'utf8');
+      
+      // Get project name from package.json or environment
+      const packageJson = require('../package.json');
+      const projectName = process.env.APP_NAME || packageJson.name || 'Serverless App';
+      
+      // Replace template variables
+      content = content.replace(/{{PROJECT_NAME}}/g, projectName);
+      content = content.replace(/{{ENVIRONMENT}}/g, environment);
+      content = content.replace(/{{BUILD_TIME}}/g, new Date().toISOString());
+      
+      fs.writeFileSync(indexPath, content);
+    }
   }
   
   console.log('✅ Frontend build complete!');
